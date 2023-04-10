@@ -6,7 +6,7 @@ from pyglet.gl import *
 ani_bin = pyglet.image.atlas.TextureBin()
 
 # Prep a player animation
-def process_ani(path, general_scale=3) :
+def process_ani(path, general_scale=4) :
     animation = pyglet.image.load_animation(path)
     animation.scale = general_scale
     animation.add_to_texture_bin(ani_bin)
@@ -43,7 +43,41 @@ def load_image(image) :
 
 default_textures = {
         "DEFAULT_NODE": load_image('node.png'),
-        "WALK_CYCLE": load_ani("5.gif")
+        "SAKURA": load_image('7.png'),
+        "WIFI": load_image("menus/icons/IconBoxNetworking.png"),
+        "CHAT": load_image("menus/icons/ChatBox.png"),
+        "MENU": load_image("menus/icons/MenuBox.png"),
+        "SETTINGS": load_image("menus/icons/IconBoxSettings.png"),
+        "TERMINAL": load_image("menus/icons/TerminalBox.png"),
+        "EDIT": load_image("menus/icons/EditBox.png"),
+        "ABIG_IDLE"  : load_image("abigail/0.png"),
+        "ABIG_UP"    : load_ani("abigail/3.gif"),
+        "ABIG_DOWN"  : load_ani("abigail/4.gif"),
+        "ABIG_LEFT"  : load_ani("abigail/1.gif"),
+        "ABIG_RIGHT" : load_ani("abigail/2.gif"),
+        "ABIG_SIT"   : load_ani("abigail/6.gif"),
+        "ABIG_LAUGH" : load_ani("abigail/5.gif"),
+        "BED"   : load_image("svhouse/Bed.png"),
+        "FLOOR" : load_image("svhouse/Floors.png"),
+        "WALLS1" : load_image("svhouse/Room.png"),
+        "WALLS2" : load_image("svhouse/Walls.png"),
+        "FIREPLACE" : load_image("svhouse/Fireplace.png"),
+        "BED" : load_image("svhouse/TV_Small.png"),
+        "BOOKSHELF" : load_image("svhouse/Bookshelf_0.png"),
+        "TRIM" : load_image("svhouse/Borders.png"),
+        "XMASTREE" : load_image("svhouse/Xmas_Tree.png")
+
+        }
+
+
+default_player_animations = {
+        "IDLE"  : "ABIG_IDLE" ,
+        "UP"    : "ABIG_UP"   ,
+        "DOWN"  : "ABIG_DOWN" ,
+        "LEFT"  : "ABIG_LEFT" ,
+        "RIGHT" : "ABIG_RIGHT",
+        "SIT"   : "ABIG_SIT"  ,
+        "LAUGH" : "ABIG_LAUGH"
         }
 
 
