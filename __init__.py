@@ -1,6 +1,8 @@
-from cpo import CPO
-
+from cpo.cpo import CPO
 from sys import argv
+
+import cpo.client as client
+import cpo.server as server
 
 
 
