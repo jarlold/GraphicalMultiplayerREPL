@@ -1,5 +1,13 @@
+import dill
 import pickle
 import node_serializer
+from node_types import ContainerNode
+import node_types
+from default_resources import default_textures
+import os
+import shutil
+
+CPO = None
 
 class NodeManager:
     def __init__(self):
@@ -8,6 +16,8 @@ class NodeManager:
         self.hitboxes = [] # Contains the nodes with hitboxes, let's us check for collisions faster
         self.node_count = 0
         self.node_ids = []
+
+        self.player = None # We'll need this guy he's important!
 
         # Event subscriptions, a dictionary would be suitable here in future
         self.menu_draw_subs = []
@@ -31,7 +41,7 @@ class NodeManager:
         self.node_packet_queue = []
 
     def z_order_drawables(self):
-        k = lambda x: x.get_position()[2] - (0.1 * x.get_position()[1])
+        k = lambda x: x.get_z_draw_level()
         self.draw_subs.sort(key=k, reverse=False)
 
     def update_remote_nodes(self):
@@ -99,6 +109,10 @@ class NodeManager:
     def remove_node(self, node):
         t = False
 
+        if isinstance(node, ContainerNode):
+            for i in node._items:
+                self.remove_node(i)
+
         try:
             self.nodes.remove(node)
             t = True
@@ -159,10 +173,50 @@ class NodeManager:
         self.update_remote_nodes()
 
     def save_level(self, level_path):
-        with open(level_path, "rb"):
-            pickle.dump(self)
-            return True
-        return False
+        try:
+            os.mkdir("levels/"+level_path)
+        except FileExistsError as e:
+            shutil.rmtree("levels/"+level_path)
+            os.mkdir("levels/"+level_path)
+
+        for node in self.nodes:
+            # Make sure it's an actual game object we'd want to save
+            if hasattr(node, "is_menu"):
+                continue
+
+            # If the node is both in a container and the world nodes it might get called
+            # twice, so we'll just try/catch. This was never going to be efficient anyway.
+            if hasattr(node, "prepare_for_serialization"):
+                node.prepare_for_serialization()
+
+            # Then do the actual saving
+            with open("levels/"+level_path+"/"+str(node.node_id), 'wb') as f:
+                try:
+                    dill.dump(node, f)
+                except:
+                    print("Couldn't serialize node: " + str(node))
+
+
+            # Then put the node back to normal mode. This means any damage done by the serialize/deserialize
+            # process will happen to the world when we save. I like this because it shows it in game but it might
+            # be confusing to players...
+            if hasattr(node, "deserialize"):
+                node.deserialize()
+    
+    def load_level(self, level_path):
+        nodes = []
+        highest_node_id = 0
+        for i in os.listdir("levels/"+level_path):
+            with open("levels/"+level_path + "/" + i, 'rb') as f:
+                n = dill.load(f)
+                if hasattr(n, "deserialize"):
+                    n.deserialize()
+                nodes.append(n)
+                if n.node_id > highest_node_id:
+                    highest_node_id = n.node_id
+        self.add_nodes(nodes)
+        self.node_count = highest_node_id + 1
+
 
     def get_all_nodes_as_packets(self):
         packets = []
@@ -174,6 +228,12 @@ class NodeManager:
                 else:
                     packets.append(node.as_packet())
         return packets
+    
+    def set_player(self, p):
+        self.player = p
+
+    def get_player(self):
+        return self.player
 
 
 

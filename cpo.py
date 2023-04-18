@@ -27,7 +27,7 @@ class CPO:
         }
 
     # Screen Information
-    width = 1000
+    width = 1820
     height = 900
     fullscreen = False
     window = pyglet.window.Window(width=width, height=height, fullscreen=fullscreen)
@@ -59,6 +59,7 @@ class CPO:
         CPO.window.keystat = pyglet.window.key.KeyStateHandler()
         CPO.window.push_handlers(CPO.window.keystat)
         #menus.setup_base_menu(CPO.nm)
+        glViewport( 0, 0, CPO.width, CPO.height )
 
     @staticmethod
     def start_server():
@@ -81,14 +82,20 @@ class CPO:
 
     @staticmethod
     def start_world():
-        CPO.nm.add_nodes([
+        CPO.nm.load_level("1681593518.310494")
+        return
+        CPO.nm.set_player(
                 node_types.PlayerNode(y=0, z=0),
-            #   node_types.WallNode(x=100),
-            #   node_types.SpriteNode(texture="DEFAULT_NODE", x=200),
-            #   node_types.HitboxNode(x=300, width=50, height=50),
+                )
+        CPO.nm.add_nodes([
+                node_types.WallNode(x=100),
+                CPO.nm.get_player(),
+                node_types.SpriteNode(texture="DEFAULT_NODE", x=200),
+                node_types.HitboxNode(x=300, width=50, height=50),
             #   node_types.BaseNode(-100),
                 node_types.TextNode(x=10, text="Hello world!|AS")
                 ])
+
 
         
     @staticmethod
@@ -100,6 +107,7 @@ class CPO:
         server.CPO = CPO
         menus.CPO = CPO
         menu_nodes.CPO = CPO
+        node_manager.CPO = CPO
     
         CPO.setup_window()
 
@@ -134,7 +142,6 @@ class CPO:
     def draw_all(dt):
         CPO.window.clear()
 
-
         # Pan the camera to the player
         glTranslatef(CPO.screen_pan_x, 0, 0)
         glTranslatef(0, CPO.screen_pan_y, 0)
@@ -142,20 +149,16 @@ class CPO:
         # Draw most of our in-game stuff
         CPO.node_manager.draw_nodes()
 
-        # Pan the camera to the player
+        # Move the camera back
         glTranslatef(-CPO.screen_pan_x, 0, 0)
         glTranslatef(0, -CPO.screen_pan_y, 0)
 
 
-        # Move the camera back
-       #glTranslatef(-CPO.screen_pan_x, 0, 0)
-       #glTranslatef(0, -CPO.screen_pan_y, 0)
-
-       #glTranslatef(-CPO.screen_pan_x, 0, 0)
-       #glTranslatef(0, -CPO.screen_pan_y, 0)
-
-        # Draw the menus because they don't care about panning
+      # # Draw the menus because they don't care about panning
         CPO.node_manager.draw_menus()
+
+
+
 
     @staticmethod
     @window.event # because of weird frame limiting rules this is how 

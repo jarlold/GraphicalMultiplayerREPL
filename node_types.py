@@ -23,6 +23,14 @@ class BaseNode:
     def set_position(self, x, y, z):
         self.x, self.y, self.z = x, y, z
 
+    def add_position(self, x, y, z):
+        self.x += x
+        self.y += y
+        self.z += z
+
+    def get_z_draw_level(self):
+        return self.get_position()[2] - (0.1 * self.get_position()[1]) 
+
     # Overrides
     def as_packet(self):
         node_id = self.node_id
@@ -35,6 +43,50 @@ class BaseNode:
         )
 
 
+class ContainerNode(BaseNode):
+    def __init__(self, x=0, y=0, z=0, items=None):
+        BaseNode.__init__(self, x, y, z)
+        self._items = items
+        if self._items is None:
+            self._items = []
+        self._items.sort(key = lambda x: x.get_z_draw_level())
+
+    # Overrides
+    def add_position(self, x, y, z):
+        BaseNode.add_position(self, x, y, z)
+        for i in self._items:
+            i.add_position(x, y, z)
+
+    def add_item(self, item):
+        self._items.append(item)
+        self._items.sort(key = lambda x: x.get_z_draw_level())
+
+    def __getitem__(self, index):
+        return self._items[index]
+
+    def prepare_for_serialization(self):
+        for i in self._items:
+            if hasattr(i, "prepare_for_serialization"):
+                i.prepare_for_serialization()
+
+    def deserialize(self):
+        for i in self._items:
+            if hasattr(i, "deserialize"):
+                i.deserialize()
+
+    # Overrides
+    def set_position(self, x, y, z):
+        dx, dy, dz = x - self.x, y - self.y, z - self.z
+        self.add_position(dx, dy, z)
+
+    # Overrides
+    def as_packet(self):
+        return [i.as_packet() for i in self._items]
+
+    # Overrides
+    def draw(self):
+        for item in self._items:
+            if hasattr(item, "draw"): item.draw()
 
 
 class SpriteNode(BaseNode):
@@ -50,6 +102,13 @@ class SpriteNode(BaseNode):
         else:
             self.texture = texture
 
+            # TODO: this is inefficient, it doesn't happen often though
+            for k in default_textures:
+                if default_textures[k] == texture:
+                    self.texture_name = k
+                    break
+
+
         BaseNode.__init__(self, x=x, y=y, z=z)
         self.sprite = pyglet.sprite.Sprite(
                 img=self.texture,
@@ -60,12 +119,31 @@ class SpriteNode(BaseNode):
         self.z = z
 
 
+    def deserialize(self):
+        if hasattr(self, "texture") and hasattr(self, "sprite"):
+            return
+            
+        self.texture = default_textures[self.texture_name]
+        self.sprite = pyglet.sprite.Sprite(
+                img=self.texture,
+                x=self.x,
+                y=self.y
+                )
+
+    def prepare_for_serialization(self):
+        self.x, self.y = self.sprite.x, self.sprite.y
+        del(self.sprite)
+        del(self.texture)
+
     def set_texture(self, texture):
        self.sprite.image = default_textures[texture]
        self.texture_name = texture
 
     def get_texture_name(self):
         return self.texture_name
+
+    def get_texture(self):
+        return self.sprite.image
 
     # Overrides
     def get_position(self):
@@ -74,6 +152,7 @@ class SpriteNode(BaseNode):
     # Overrides
     def set_position(self, x, y, z):
         self.sprite.x, self.sprite.y, self.z = x, y, z
+        self.x, self.y = self.sprite.x, self.sprite.y
 
     def add_position(self, x, y, z):
         xyz = [ a + b for a,b in zip(self.get_position(), (x,y,z)) ]
@@ -108,6 +187,15 @@ class TextNode(BaseNode):
         self.label.x = x
         self.label.y = y
         self.z = z
+
+    def prepare_for_serialization(self):
+        self.text = self.label.text
+        self.font = self.label.font_name
+        self.x, self.y = self.label.x, self.label.y
+        del(self.label)
+
+    def deserialize(self):
+        self.label = pyglet.text.Label(self.text, font_name=self.font)
     
     # Overrides
     def get_position(self):
@@ -140,6 +228,7 @@ class TextNode(BaseNode):
 
 class HitboxNode(BaseNode):
     def __init__(self, width=1, height=1, x=0, y=0, z=0):
+        is_menu = True
         BaseNode.__init__(self, x=x, y=y, z=z)
         self.width, self.height, = width, height
 
@@ -151,6 +240,18 @@ class HitboxNode(BaseNode):
         self.x, self.y, self.z = x, y, z
         self.render_shape.x, self.render_shape.y = x, y
 
+    def add_position(self, x, y, z):
+        # Very efficient super cool (sarcasm)
+        xyz = [ a + b for a,b in zip(self.get_position(), (x, y, z)) ]
+        self.set_position(*xyz)
+
+    def prepare_for_serialization(self):
+        self.render_shape = None
+
+    def deserialize(self):
+        self.render_shape = pyglet.shapes.Rectangle(self.x, self.y, self.width, self.height, color=(255, 22, 20))
+        self.render_shape.opacity = 125
+
     def check_point_col(self, x, y):
         nx = x - CPO.window.width/2.0
         ny = y - CPO.window.height/2.0
@@ -160,7 +261,8 @@ class HitboxNode(BaseNode):
         return self.x < other.x + other.width and \
             self.x + self.width > other.x and \
             self.y < other.y + other.height and \
-            self.height + self.y > other.y 
+            self.height + self.y > other.y and \
+            self.z == other.z
 
     def get_hitbox(self):
         return self
@@ -183,37 +285,15 @@ class HitboxNode(BaseNode):
                 node_id, x,y,z, t, widthheight
         )
 
-
-class WallNode(SpriteNode):
-    def __init__(self, x=0, y=0, z=0, hit_width=None, hit_height=None, texture_name=None):
-
-        SpriteNode.__init__(self, 
-                texture=texture_name, 
-                x=x, y=y, z=z)
-
-        if hit_width is None:
-            self.hit_width = self.texture.width
-        else:
-            self.hit_width = hit_width
-
-        if hit_height is None:
-            self.hit_height = self.texture.height
-        else:
-            self.hit_height = hit_height
-
-        self.hitbox_x_offset = -self.texture.width/2.0
-        self.hitbox_y_offset = -self.texture.height/2.0
-
+class HitboxHaver:
+    def __init__(self, x, y, z, width, height):
         self.hitbox = HitboxNode(
-                width = self.hit_width,
-                height = self.hit_height,
-                x = x + self.hitbox_x_offset,
-                y = y + self.hitbox_y_offset,
+                width = width,
+                height = height,
+                x = x ,
+                y = y,
+                z = z
                 )
-
-    def set_position(self, x, y, z):
-        SpriteNode.set_position(self, x, y, z)
-        self.hitbox.set_position(self, x + self.hitbox_x_offset, y + self.hitbox_y_offset, z)
 
     def check_point_col(self, x, y):
         return self.hitnode.check_point_col(x, y)
@@ -224,19 +304,26 @@ class WallNode(SpriteNode):
     def get_hitbox(self):
         return self.hitbox
 
-    # Overrides
-    def draw(self):
-        self.sprite.draw()
-        self.hitbox.draw()
 
-    def as_packet(self):
-        return [self.get_hitbox().as_packet(), SpriteNode.as_packet(self)]
+class WallNode(ContainerNode, HitboxHaver):
+    def __init__(self, x=0, y=0, z=0, hit_width=None, hit_height=None, texture_name=None):
+        self.sprite = SpriteNode( texture=texture_name, x=x, y=y, z=z)
+        
+        hit_width = self.sprite.get_texture().width if hit_width is None else hit_width
+        hit_height = self.sprite.get_texture().height if hit_height is None else hit_height
+        hitbox_x_offset = -self.sprite.get_texture().width/2.0
+        hitbox_y_offset = -self.sprite.get_texture().height/2.0
 
+        HitboxHaver.__init__(self, x + hitbox_x_offset, y+hitbox_y_offset, z, hit_width, hit_height)
+        ContainerNode.__init__(self, x=x, y=y, z=z, items= [self.sprite, self.hitbox])
 
-class PlayerNode(SpriteNode):
+class PlayerNode(ContainerNode, HitboxHaver):
     def __init__(self, texture_dictionary=None, x=0, y=0, z=0, walk_speed=2, run_speed=4):
+        
+        # Just gotta store these bad boys
+        self.walk_speed, self.run_speed = walk_speed, run_speed
 
-        # If no textures provided, we'll just use the default node 
+        # If no textures provided, we'll just use the default ones
         if texture_dictionary is None:
             texture_dictionary = default_player_animations
 
@@ -253,45 +340,39 @@ class PlayerNode(SpriteNode):
         else:
             self.texture_dictionary = texture_dictionary
 
+        # By default, we'll start out idling- and use this as the basis for our hitboxs'
+        # shape
         self.texture_name = self.texture_dictionary["IDLE"]
 
+        # Gonna be typing this out a lot lol
         idle_img = default_textures[self.texture_dictionary["IDLE"]]
-
-        SpriteNode.__init__(self, texture=idle_img, x=x, y=y, z=z)
         
-        self.hitbox_y_offset = -idle_img.height/2.0 +5
-        self.hitbox_x_offset = -idle_img.width/2.0 +7.5
-
-        self.hitbox = HitboxNode(
+        hitbox_y_offset = -idle_img.height/2.0 + 5
+        hitbox_x_offset = -idle_img.width/2.0 + 7.5
+        HitboxHaver.__init__(
+                self,
                 width = idle_img.width - 15,
-                height = idle_img.height/3.0 - 10,
-                x = x + self.hitbox_x_offset,
-                y = y + self.hitbox_y_offset)
+                height = idle_img.height/3.0 ,
+                x = x + hitbox_x_offset,
+                y = y + hitbox_y_offset,
+                z = z
+                )
 
-        self.walk_speed, self.run_speed = walk_speed, run_speed
+        self.sprite = SpriteNode(texture=idle_img, x=x, y=y, z=z)
+        ContainerNode.__init__(self, x, y, z, items=[self.hitbox, self.sprite])
 
-    def get_hitbox(self):
-        return self.hitbox
+
 
     def set_animation(self, animation_name):
-        self.set_texture(self.texture_dictionary[animation_name])
+        self.sprite.set_texture(self.texture_dictionary[animation_name])
 
-    # Overrides
-    def get_position(self):
-        return self.sprite.x, self.sprite.y, self.z
-
-    # Overrides
-    def set_position(self, x, y, z):
-        self.sprite.x, self.sprite.y, self.z = x, y, z
-        self.hitbox.set_position(x + self.hitbox_x_offset, y + self.hitbox_y_offset, z)
-
-    def add_position(self, vec):
+    def add_position(self, x, y, z):
         old_pos = self.get_position()
-        self.set_position( * [ a + b for a, b in zip(old_pos, vec)])
+        ContainerNode.add_position(self, x, y, z)
         
         # If that position is taken up by another hitbox, go home and cry.
         for o in CPO.nm.hitboxes:
-            if o is self: continue
+            if o is self or (hasattr(o, "is_menu") and o.is_menu): continue
             if o.get_hitbox().check_hitnode_col(self.get_hitbox()):
                 self.set_position(*old_pos)
                 return False
@@ -326,28 +407,22 @@ class PlayerNode(SpriteNode):
         if CPO.is_key_down(CPO.game_controls['RIGHT']):
             self.set_animation("RIGHT")
 
-
     def on_update(self):
         if CPO.is_key_down(CPO.game_controls["UP"]):
-            if self.add_position([0, self.walk_speed, 0]):
+            if self.add_position(0, self.walk_speed, 0):
                 CPO.pan_camera(0, -self.walk_speed)
 
         if CPO.is_key_down(CPO.game_controls["DOWN"]):
-            if self.add_position([0, -self.walk_speed, 0]):
+            if self.add_position(0, -self.walk_speed, 0):
                 CPO.pan_camera(0, self.walk_speed)
 
         if CPO.is_key_down(CPO.game_controls["LEFT"]):
-            if self.add_position([-self.walk_speed, 0, 0]):
+            if self.add_position(-self.walk_speed, 0, 0):
                 CPO.pan_camera(self.walk_speed, 0)
 
         if CPO.is_key_down(CPO.game_controls["RIGHT"]):
-            if self.add_position([self.walk_speed, 0, 0]):
+            if self.add_position(self.walk_speed, 0, 0):
                 CPO.pan_camera(-self.walk_speed, 0)
-
-    # Overrides
-    def draw(self):
-        SpriteNode.draw(self)
-        self.hitbox.draw()
 
     def as_packet(self):
         return SpriteNode.as_packet(self)
