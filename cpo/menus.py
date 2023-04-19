@@ -15,40 +15,6 @@ def print_cool_debug():
     print(CPO.nm.nodes)
 
 
-def kill_chat():
-    global chat_menu
-    CPO.nm.remove_node(chat_menu)
-    chat_menu = None
-
-def create_chat_menu():
-    global chat_menu # wait it's a reference type nvm tho
-    if not chat_menu is None:
-        return
-    chat_container = DraggableContainerMenu(
-            x=-default_textures["CHATMENU"].width/2.0, 
-            y=default_textures["CHATMENU"].height/2.0 - 30, 
-            z=201, 
-            width=default_textures["CHATMENU"].width - 50, 
-            height=30
-            )
-
-    chat_close = StandardButton(
-            default_textures["CHATMENU"].width/2.0  - default_textures["CLOSE"].width/2.0,
-            default_textures["CHATMENU"].height/2.0 - default_textures["CLOSE"].height/2.0, 
-            depressed="CLOSE", 
-            pressed="CLOSE", 
-            hover="HCLOSE",
-            on_click=kill_chat
-            )
-
-    background = BackgroundSprite(0, 0, 0, texture="CHATMENU")
-    chat_container.add_item(background)
-    chat_container.add_item(chat_close)
-    CPO.nm.add_nodes([chat_container, chat_close])
-    chat_menu = chat_container
-    return chat_container
-
-
 def save_level():
     CPO.nm.save_level(str(time.time()))
 

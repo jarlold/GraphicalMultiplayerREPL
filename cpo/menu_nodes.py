@@ -287,8 +287,8 @@ class NodeCreationMenu(DraggableContainer):
                 )
 
         self.next_texture_btn = StandardButton(
-                default_textures["NODEMENU"].width/2.0  - default_textures["NEXTSPRITE"].width/2.0,
-                default_textures["NODEMENU"].height/2.0 - default_textures["NEXTSPRITE"].height/2.0 - 100, 
+                54 * 4,
+                15 * -4,
                 z=202,
                 depressed="NEXTSPRITE", 
                 pressed="NEXTSPRITE", 
@@ -296,8 +296,8 @@ class NodeCreationMenu(DraggableContainer):
                 )
 
         self.prev_texture_btn = StandardButton(
-                default_textures["NODEMENU"].width/2.0  - default_textures["PREVSPRITE"].width/2.0 - 50,
-                default_textures["NODEMENU"].height/2.0 - default_textures["PREVSPRITE"].height/2.0 - 100, 
+                4 * 15,
+                15 * -4,
                 z=202,
                 depressed="PREVSPRITE", 
                 pressed="PREVSPRITE", 
@@ -305,8 +305,8 @@ class NodeCreationMenu(DraggableContainer):
                 )
 
         self.place_sprite_btn = StandardButton(
-                default_textures["NODEMENU"].width/2.0  - default_textures["PLACENODE"].width/2.0 - 25,
-                default_textures["NODEMENU"].height/2.0 - default_textures["PLACENODE"].height/2.0 - 150, 
+                35 * 4,
+                15 * -4,
                 z=202,
                 depressed="PLACENODE", 
                 pressed="PLACENODE", 
@@ -314,8 +314,8 @@ class NodeCreationMenu(DraggableContainer):
                 )
 
         self.sprite_z_up_btn = StandardButton(
-                default_textures["NODEMENU"].width/2.0  - default_textures["SMALLPLUS"].width/2.0 - 125,
-                default_textures["NODEMENU"].height/2.0 - default_textures["SMALLPLUS"].height/2.0 - 50, 
+                -default_textures["NODEMENU"].width/2.0 + 200,
+                default_textures["NODEMENU"].height/2.0 - 46 * 4,
                 z=202,
                 depressed="SMALLPLUS", 
                 pressed="SMALLPLUS", 
@@ -323,8 +323,8 @@ class NodeCreationMenu(DraggableContainer):
                 )
 
         self.sprite_z_down_btn = StandardButton(
-                default_textures["NODEMENU"].width/2.0  - default_textures["SMALLMINUS"].width/2.0 - 125,
-                default_textures["NODEMENU"].height/2.0 - default_textures["SMALLMINUS"].height/2.0 - 150, 
+                -default_textures["NODEMENU"].width/2.0 + 8 * 4 + default_textures["SMALLMINUS"].width/2.0 - 1,
+                default_textures["NODEMENU"].height/2.0 - 46 * 4,
                 z=202,
                 depressed="SMALLMINUS", 
                 pressed="SMALLMINUS", 
@@ -332,8 +332,8 @@ class NodeCreationMenu(DraggableContainer):
                 )
 
         self.z_label = TextItem(
-                x=default_textures["NODEMENU"].width/2.0  - default_textures["CLOSE"].width/2.0 - 225,
-                y=default_textures["NODEMENU"].height/2.0 - default_textures["CLOSE"].height/2.0 - 150, 
+                x=-default_textures["NODEMENU"].width/2.0 + 75,
+                y=default_textures["NODEMENU"].height/2.0 - 50 * 4 + 6 ,
                 z=202,
                 text="Z: 1",
                 color=(0, 0, 0, 255),
@@ -348,6 +348,8 @@ class NodeCreationMenu(DraggableContainer):
                 y=default_textures["NODEMENU"].height/2.0 - 30*4, 
                 z=205
                 )
+        self.preview_sprite.is_menu = True
+        self.hitbox.is_menu = True
 
         self.add_item(self.background)
         self.add_item(self.creator_close)
@@ -407,8 +409,8 @@ class NodeCreationMenu(DraggableContainer):
     def place_sprite(self):
         s = SpriteNode(
                 texture=self.preview_sprite.get_texture(), 
-                x=CPO.mouse_x - CPO.width/2.0, 
-                y=CPO.mouse_y - CPO.height/2.0, 
+                x=CPO.mouse_x - CPO.width/2.0 - CPO.screen_pan_x, 
+                y=CPO.mouse_y - CPO.height/2.0 - CPO.screen_pan_y, 
                 z=self.place_sprite_z
             )
         d =  DraggableContainer()

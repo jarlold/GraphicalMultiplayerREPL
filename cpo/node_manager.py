@@ -234,6 +234,9 @@ class NodeManager:
         return self.player
 
     def start_world(self):
-        pass
+       self.load_level("1681919818.3668005")
+       #self.add_node(
+       #        node_types.PlayerNode()
+       #        )
 
 
