@@ -46,11 +46,18 @@ class Server:
             if packet.startswith("sync"):
                 self.send_all_nodes(conn)
 
+            if packet.startswith("delta"):
+                self.send_changed_nodes(conn)
+
     def send_all_nodes(self, conn):
         node_packets = CPO.nm.get_all_nodes_as_packets()
         for np in node_packets:
             self.send_node_packet(conn, np)
 
+    def send_changed_nodes(self, conn):
+        node_packets = CPO.nm.get_changed_nodes_as_packets()
+        for np in node_packets:
+            self.send_node_packet(conn, np)
 
     def send_packet(self, conn, p):
         if len(p) <= self.buffsize:

@@ -1,6 +1,5 @@
 from cpo.default_resources import default_textures
-
-NODE_TYPES = None
+from cpo.node_types import *
 
 
 def packets_to_nodes(packet):
@@ -25,7 +24,6 @@ def packet_to_node(packet):
         b = SpriteNode(x=x, y=y, z=z, texture=type_data)
 
     elif node_type == NODE_TYPES[TextNode]:
-        print(type_data)
         b = TextNode(x=x, y=y, z=z, text=type_data)
 
     elif node_type == NODE_TYPES[HitboxNode]:
@@ -33,7 +31,7 @@ def packet_to_node(packet):
         width, height = float(width), float(height)
         b = HitboxNode(x=x, y=y, z=z, width=width, height=height)
 
-
     b.node_id = node_id
+
     return b
 

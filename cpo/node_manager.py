@@ -10,7 +10,6 @@ import shutil
 class NodeManager:
     def __init__(self):
         self.nodes = [] # ALL nodes
-        self.remote_nodes = [] # nodes sent by the server that are synced by the server
         self.hitboxes = [] # Contains the nodes with hitboxes, let's us check for collisions faster
         self.node_count = 0
         self.node_ids = []
@@ -37,6 +36,7 @@ class NodeManager:
         # even if it's to add it to a list here. So we store the packets then parese them
         # into nodes from the pyglet thread.
         self.node_packet_queue = []
+        self.removed_nodes_packet_queue = []
 
     def z_order_drawables(self):
         k = lambda x: x.get_z_draw_level()
@@ -49,10 +49,26 @@ class NodeManager:
             self.update_remote_node(node)
 
 
+    def remove_all_nodes(self):
+        self.draw_subs = []
+        self.mouse_press_subs = []
+        self.mouse_release_subs = []
+        self.mouse_drag_subs = []
+        self.mouse_motion_subs = []
+        self.key_press_subs = []
+        self.key_release_subs = []
+        self.update_subs = []
+        self.nodes = [] 
+        self.hitboxes = [] 
+
+
     def update_remote_node(self, node):
         for i, n in enumerate(self.nodes):
             if n.node_id == node.node_id:
-                self.nodes[i].__dict__ = node.__dict__
+                #self.nodes[i].__dict__ = node.__dict__
+                self.nodes[i].set_position(*node.get_position())
+                if hasattr(self.nodes[i], "get_texture_name") and self.nodes[i].get_texture_name() != node.get_texture_name():
+                    self.nodes[i].set_texture(node.get_texture_name())
                 return
         self.add_node(node)
 
@@ -108,9 +124,15 @@ class NodeManager:
         for i in nodes:
             self.remove_node(i)
 
+    def remove_node_by_id(self, node_id):
+        for node in self.nodes:
+            if node.node_id == node_id:
+                return self.remove_node(node)
+        return False
+
+
     def remove_node(self, node):
         t = False
-
         try:
             self.nodes.remove(node)
             t = True
@@ -124,6 +146,22 @@ class NodeManager:
             t = True
         except ValueError:
             pass
+
+        if t and hasattr(node, "as_packet"):
+            #print("Storing remove node packet.")
+            self.removed_nodes_packet_queue.append(
+                    "REMOVE {}".format(node.node_id)
+                    )
+            if isinstance(node, node_types.ContainerNode):
+                # Kill the children kill them hail satan hail satan murder children
+                # uhh i mean
+                # for performance that's why
+                for i in node:
+                    self.removed_nodes_packet_queue.append(
+                            "REMOVE {}".format(i.node_id)
+                            )
+                    self.remove_node(i)
+
 
         return t
 
@@ -223,8 +261,33 @@ class NodeManager:
                 p = node.as_packet()
                 if isinstance(p, list):
                     packets += p
+                elif hasattr(node, "is_menu") and node.is_menu:
+                    continue
                 else:
                     packets.append(node.as_packet())
+        if len(self.removed_nodes_packet_queue) >= 1:
+            print("Sending remove packet!")
+        packets += self.removed_nodes_packet_queue
+        self.removed_nodes_packet_queue = []
+        return packets
+
+    def get_changed_nodes_as_packets(self):
+        packets = []
+        for node in self.nodes:
+            if not hasattr(node, "has_changed") or not node.has_changed:
+                continue
+            if hasattr(node, "as_packet"):
+                p = node.as_packet()
+                if isinstance(p, list):
+                    packets += p
+                elif hasattr(node, "is_menu") and node.is_menu:
+                    continue
+                else:
+                    packets.append(node.as_packet())
+        if len(self.removed_nodes_packet_queue) >= 1:
+            print("Sending remove packet!")
+        packets += self.removed_nodes_packet_queue
+        self.removed_nodes_packet_queue = []
         return packets
     
     def set_player(self, p):

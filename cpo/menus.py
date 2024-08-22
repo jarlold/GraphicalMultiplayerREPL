@@ -6,9 +6,12 @@ CPO = None
 
 def enter_edit_mode():
     print("--- Player Data ---")
-    p = CPO.nm.get_player()
-    print(p.get_position())
-    print(p._items)
+    #p = CPO.nm.get_player()
+    #print(p.get_position())
+    #print(p._items)
+    print([i.node_id for i in CPO.nm.nodes if not hasattr(i, "is_menu") or not i.is_menu])
+    print( a := [i for i in CPO.nm.nodes if i.node_id in [21, 22, 23]])
+    print([i.get_texture_name() for i in a if hasattr(i, "get_texture_name")])
 
 def print_cool_debug():
     print("--- DEBUG DATA ---")

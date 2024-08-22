@@ -21,6 +21,9 @@ class Client:
 
         self.node_packet_queue = []
 
+        self.last_sync = 0
+        self.sync_every = 30
+
     def connect(self):
         self.conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.conn.connect((self.ip, self.port))
@@ -38,12 +41,24 @@ class Client:
         self.conn.sendall(bytes("heartbeat", encoding='utf8'))
 
     def request_sync(self):
-        self.conn.sendall(bytes("sync", encoding='utf8'))
+        if time.time() - self.last_sync >= self.sync_every:
+            self.conn.sendall(bytes("sync", encoding='utf8'))
+            self.last_sync = time.time()
+        else:
+            self.conn.sendall(bytes("delta", encoding='utf8'))
 
     def packet_reply(self, packet):
         if packet.startswith("NODE|"):
-            print("Received node packet: " + packet)
+            #print("Received node packet: " + packet)
             CPO.nm.node_packet_queue.append(packet)
+            return
+
+        if packet.startswith("REMOVE"):
+            node_id = int(packet.replace("REMOVE ", '').strip())
+            print("Trying to remove {} which {}".format(
+                node_id,
+                CPO.nm.remove_node_by_id(node_id)
+            ))
 
 
 

@@ -14,17 +14,20 @@ class BaseNode:
     def __init__(self, x=0, y=0, z=0):
         self.x, self.y, self.z = x, y, z
         self.node_id = CPO.nm.get_new_node_id()
+        self.has_changed = True # We need to send it at least once for the player to get it!
 
     def get_position(self):
         return self.x, self.y, self.z
 
     def set_position(self, x, y, z):
         self.x, self.y, self.z = x, y, z
+        self.has_changed = True
 
     def add_position(self, x, y, z):
         self.x += x
         self.y += y
         self.z += z
+        self.has_changed = True
 
     def get_z_draw_level(self):
         return self.get_position()[2] - (0.01 * self.get_position()[1]) 
@@ -35,6 +38,9 @@ class BaseNode:
         x, y, z = self.get_position()
         t = NODE_TYPES[BaseNode]
         texture_name = "NA"
+
+
+        self.has_changed = False
 
         return NODE_PACKET_FORMAT.format(
                 node_id, x,y,z, t, texture_name
@@ -151,12 +157,14 @@ class SpriteNode(BaseNode):
     def set_position(self, x, y, z):
         self.sprite.x, self.sprite.y, self.z = x, y, z
         self.x, self.y = self.sprite.x, self.sprite.y
+        self.has_changed = True
 
     def add_position(self, x, y, z):
         xyz = [ a + b for a,b in zip(self.get_position(), (x,y,z)) ]
         self.set_position(
                 *xyz
                 )
+        self.has_changed = True
     
     def draw(self):
         self.sprite.draw()
@@ -167,6 +175,8 @@ class SpriteNode(BaseNode):
         x, y, z = self.get_position()
         t = NODE_TYPES[SpriteNode]
         texture_name = self.get_texture_name()
+
+        self.has_changed = False
 
         return NODE_PACKET_FORMAT.format(
                 node_id, x,y,z, t, texture_name
@@ -208,18 +218,21 @@ class TextNode(BaseNode):
     # Overrides
     def set_position(self, x, y, z):
         self.label.x, self.label.y, self.z = x, y, z
+        self.has_changed = True
 
     # Overrides
     def add_position(self, x, y, z):
         self.label.x += x
         self.label.y += y
         self.z += z
+        self.has_changed = True
 
     def get_text(self):
         return self.label.text
 
     def set_text(self, text):
         self.label.text = text
+        self.has_changed = True
 
     def draw(self):
         self.label.draw()
@@ -231,6 +244,7 @@ class TextNode(BaseNode):
         t = NODE_TYPES[TextNode]
         text = self.get_text()
 
+        self.has_changed = False
         return NODE_PACKET_FORMAT.format(
                 node_id, x,y,z, t, text.replace("|","")
         )
@@ -249,6 +263,7 @@ class HitboxNode(BaseNode):
     def set_position(self, x, y, z):
         self.x, self.y, self.z = x, y, z
         self.render_shape.x, self.render_shape.y = x, y
+        self.has_changed = True
 
     def add_position(self, x, y, z):
         # Very efficient super cool (sarcasm)
@@ -290,6 +305,8 @@ class HitboxNode(BaseNode):
         x, y, z = self.get_position()
         t = NODE_TYPES[HitboxNode]
         widthheight = "{},{}".format(self.width, self.height)
+
+        self.has_changed = False
 
         return NODE_PACKET_FORMAT.format(
                 node_id, x,y,z, t, widthheight
@@ -372,9 +389,9 @@ class PlayerNode(ContainerNode, HitboxHaver):
         ContainerNode.__init__(self, x, y, z, items=[self.hitbox, self.sprite])
 
 
-
     def set_animation(self, animation_name):
         self.sprite.set_texture(self.texture_dictionary[animation_name])
+        self.has_changed = True
 
     def add_position(self, x, y, z):
         old_pos = self.get_position()
@@ -386,6 +403,8 @@ class PlayerNode(ContainerNode, HitboxHaver):
             if o.get_hitbox().check_hitnode_col(self.get_hitbox()):
                 self.set_position(*old_pos)
                 return False
+
+        self.has_changed = True
 
         # Otherwise go home and give it to mom so she can hang it on the fridge
         return True
@@ -433,9 +452,6 @@ class PlayerNode(ContainerNode, HitboxHaver):
         if CPO.is_key_down(CPO.game_controls["RIGHT"]):
             if self.add_position(self.walk_speed, 0, 0):
                 CPO.pan_camera(-self.walk_speed, 0)
-
-    def as_packet(self):
-        return SpriteNode.as_packet(self)
 
 
 # Used to turn the nodes into packets

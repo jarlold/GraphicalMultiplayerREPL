@@ -33,8 +33,8 @@ class CPO:
     mouse_y = 0
 
     # Screen Information
-    width = 1820
-    height = 900
+    width = 800
+    height = 600
     fullscreen = False
     window = pyglet.window.Window(width=width, height=height, fullscreen=fullscreen)
     screen_pan_x = 0
@@ -116,7 +116,7 @@ class CPO:
 
         if CPO.is_server:
             CPO.nm.start_world()
-            CPO.nm.start_server()
+            CPO.start_server()
 
         if not CPO.is_server and not CPO.is_client:
             CPO.nm.start_world()
@@ -153,7 +153,7 @@ class CPO:
         glTranslatef(0, -CPO.screen_pan_y, 0)
 
 
-      # # Draw the menus because they don't care about panning
+        # Draw the menus because they don't care about panning
         CPO.node_manager.draw_menus()
 
 
@@ -196,8 +196,6 @@ class CPO:
     @window.event
     def on_key_release(k, mod):
         CPO.nm.on_key_release(k, mod)
-
-
 
     @staticmethod
     def on_update(self):
